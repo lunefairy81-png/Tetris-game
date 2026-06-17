@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Tetris Clone</title>
+    <style>
+        body {
+            background-color: #202020;
+            color: #fff;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            margin-bottom: 10px;
+        }
+        canvas {
+            border: 2px solid #fff;
+            background-color: #111;
+        }
+        p {
+            color: #aaa;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Tetris</h1>
+    <canvas id="tetris" width="240" height="400"></canvas>
+    <p>Controls: Left/Right Arrow Keys to move | Spacebar to rotate</p>
+
+    <script>
+        const canvas = document.getElementById('tetris');
+        const context = canvas.getContext('2d');
+
+        // Scale blocks up to look larger on screen
+        context.scale(20, 20);
+
+        // 1. Create the Board Grid (12 columns x 20 rows)
+        const arena = createMatrix(12, 20);
+
+        // 2. Define our Tetris piece (T-shape for this example)
+        const player = {
+            pos: {x: 4, y: 0},
+            matrix: [
+                [0, 1, 0],
+                [1, 1, 1],
+                [0, 0, 0],
+            ],
+        };
+
+        // Helper function to create an empty grid matrix
+        function createMatrix(w, h) {
+            const matrix = [];
+            while (h--) {
+                matrix.push(new Array(w).fill(0));
+            }
+            return matrix;
+        }
+
+        // Draw the matrix grid elements onto the canvas
+        function drawMatrix(matrix, offset) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        context.fillStyle = '#ff0d72'; // Hot Pink piece
+                        context.fillRect(x + offset.x, y + offset.y, 1, 1);
+                    }
+                });
+            });
+        }
+
+        // Main Draw Function
+        function draw() {
+            context.fillStyle = '#111';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            drawMatrix(arena, {x: 0, y: 0});
+            drawMatrix(player.matrix, player.pos);
+        }
+
+        // Collision detection system
+        function collide(arena, player) {
+            const [m, o] = [player.matrix, player.pos];
+            for (let y = 0; y < m.length; ++y) {
+                for (let x = 0; x < m[y].length; ++x) {
+                    if (m[y][x] !== 0 &&
+                       (arena[y + o.y] &&
+                        arena[y + o.y][x + o.x]) !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Lock piece to the board when it hits bottom
+        function merge(arena, player) {
+            player.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        arena[y + player.pos.y][x + player.pos.x] = value;
+                    }
+                });
+            });
+        }
+
+        // Move piece down automatically over time
+        function playerDrop() {
+            player.pos.y++;
+            if (collide(arena, player)) {
+                player.pos.y--;
+                merge(arena, player);
+                // Reset piece to top
+                player.pos.y = 0;
+                player.pos.x = 4;
+            }
+            dropCounter = 0;
+        }
+
+        // Prevent pieces from leaving the side edges
+        function playerMove(dir) {
+            player.pos.x += dir;
+            if (collide(arena, player)) {
+                player.pos.x -= dir;
+            }
+        }
+
+        // Rotate Matrix Clockwise
+        function rotate(matrix) {
+            // Transpose (swap rows and columns)
+            for (let y = 0; y < matrix.length; ++y) {
+                for (let x = 0; x < y; ++x) {
+                    [
+                        matrix[x][y],
+                        matrix[y][x],
+                    ] = [
+                        matrix[y][x],
+                        matrix
